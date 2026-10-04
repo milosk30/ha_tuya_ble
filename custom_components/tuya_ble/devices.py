@@ -39,6 +39,7 @@ from .const import (
     DPType,
     FINGERBOT_BUTTON_EVENT,
     SET_DISCONNECTED_DELAY,
+    SLEEPY_CATEGORIES,
 )
 
 from .base import IntegerTypeData, EnumTypeData
@@ -93,6 +94,11 @@ class TuyaBLEEntity(CoordinatorEntity):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
+        # Sleepy switch devices (e.g. Fingerbots, category "kg") drop the BLE
+        # connection to save battery. Keep their entities available so a
+        # command can wake them up and reconnect on demand.
+        if self._device.category in SLEEPY_CATEGORIES:
+            return True
         return self._coordinator.connected
 
     @property

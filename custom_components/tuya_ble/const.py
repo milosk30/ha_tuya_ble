@@ -13,6 +13,9 @@ DEVICE_METADATA_UUIDS: Final = "uuids"
 DEVICE_DEF_MANUFACTURER: Final = "Tuya"
 SET_DISCONNECTED_DELAY = 10 * 60
 
+# Device categories that sleep between commands and reconnect on demand
+SLEEPY_CATEGORIES: Final = ("kg",)
+
 CONF_UUID: Final = "uuid"
 CONF_LOCAL_KEY: Final = "local_key"
 CONF_CATEGORY: Final = "category"

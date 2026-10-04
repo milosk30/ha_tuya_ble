@@ -142,8 +142,8 @@ mapping: dict[str, TuyaBLECategoryButtonMapping] = {
                     ),
                     # Available when channel 1 mode == push (0)
                     is_available=lambda self, product: (
-                        (dp := self._device.datapoints[101]) is not None
-                        and (dp.value if not isinstance(dp.value, bytes) else int.from_bytes(dp.value[:1], "big")) == 0
+                        (dp := self._device.datapoints[101]) is None
+                        or (dp.value if not isinstance(dp.value, bytes) else int.from_bytes(dp.value[:1], "big")) == 0
                     ),
                 ),
                 TuyaBLEButtonMapping(
@@ -154,8 +154,8 @@ mapping: dict[str, TuyaBLECategoryButtonMapping] = {
                     ),
                     # Available when channel 2 mode == push (0)
                     is_available=lambda self, product: (
-                        (dp := self._device.datapoints[102]) is not None
-                        and (dp.value if not isinstance(dp.value, bytes) else int.from_bytes(dp.value[:1], "big")) == 0
+                        (dp := self._device.datapoints[102]) is None
+                        or (dp.value if not isinstance(dp.value, bytes) else int.from_bytes(dp.value[:1], "big")) == 0
                     ),
                 ),
             ],
