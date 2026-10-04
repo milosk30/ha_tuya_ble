@@ -238,6 +238,9 @@ class TuyaBLEDataPoints:
 
 global_connect_lock = asyncio.Lock()
 
+# Seconds within which an identical notification packet is a duplicate
+DUPLICATE_PACKET_WINDOW = 2.0
+
 @dataclass
 class TuyaBLEDeviceFunction:
     code: str
@@ -295,6 +298,9 @@ class TuyaBLEDevice:
         self._input_buffer: bytearray | None = None
         self._input_expected_packet_num = 0
         self._input_expected_length = 0
+        # Recently received notification packets, used to drop duplicates
+        # that some Bluetooth stacks deliver after a reconnect.
+        self._recent_packets: list[tuple[bytes, float]] = []
         self._input_expected_responses: dict[int,
                                              asyncio.Future[int] | None] = {}
         # self._input_future: asyncio.Future[int] | None = None
@@ -718,6 +724,11 @@ class TuyaBLEDevice:
             await asyncio.sleep(0.01)
             if self._client and self._client.is_connected and self._is_paired:
                 return
+            # Start every new connection with clean protocol state
+            self._clean_input()
+            self._recent_packets = []
+            async with self._seq_num_lock:
+                self._current_seq_num = 1
             attempts_count = 5
             while attempts_count > 0:
                 attempts_count -= 1
@@ -1400,6 +1411,20 @@ class TuyaBLEDevice:
     def _notification_handler(self, _sender: int, data: bytearray) -> None:
         """Handle notification responses."""
         _LOGGER.debug("%s: Packet received: %s", self.address, data.hex())
+
+        # After a reconnect the same notification can be delivered several
+        # times (one per stale subscription), which breaks reassembly. Every
+        # packet carries its packet number and encrypted payload, so an
+        # identical packet within a short window is a duplicate.
+        now = time.monotonic()
+        packet = bytes(data)
+        self._recent_packets = [
+            (p, t) for p, t in self._recent_packets if now - t < DUPLICATE_PACKET_WINDOW
+        ]
+        if any(p == packet for p, _ in self._recent_packets):
+            _LOGGER.debug("%s: Duplicate packet ignored", self.address)
+            return
+        self._recent_packets.append((packet, now))
 
         pos: int = 0
         packet_num: int
